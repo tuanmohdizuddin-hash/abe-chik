@@ -183,6 +183,7 @@ dialog .act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
     </div>
     <div class="hdr-r">
       <input type="month" id="month" aria-label="Pilih bulan">
+      <button class="btn ghost" id="btnInstall" hidden style="border-color:var(--gold-2);color:var(--gold-1)">📲 Install</button>
       <button class="btn ghost" id="btnBudget" title="Tetapkan bajet">⚙︎ Bajet</button>
     </div>
   </header>
@@ -283,6 +284,11 @@ dialog .act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
   <div class="act"><button class="btn ghost" data-close>Batal</button><button class="btn gold" id="catSave">Tambah</button></div>
 </dialog>
 
+<dialog id="dlgInstall">
+  <h3>Install ke Telefon</h3>
+  <div id="installMsg" style="font-size:14px;line-height:1.6;color:var(--silver-1)"></div>
+  <div class="act"><button class="btn gold" data-close>OK</button></div>
+</dialog>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -655,7 +661,22 @@ $('#fAmt').addEventListener('input',()=>{ lastVia='typed'; });
 $('#month').value=sel.month; $('#fDate').value=ymd(new Date()); dateLbl();
 ['input','change'].forEach(ev=>$('#fDate').addEventListener(ev,dateLbl));
 buildPeople(); buildCats(); render();
-if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* ---------- install (PWA) ---------- */
+let deferredPrompt=null;
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+const btnI=$('#btnInstall');
+if(!standalone()) btnI.hidden=false;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;btnI.hidden=false;});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;btnI.hidden=true;toast('App berjaya dipasang ✓');});
+btnI.addEventListener('click',async()=>{
+  if(deferredPrompt){deferredPrompt.prompt();const r=await deferredPrompt.userChoice;deferredPrompt=null;if(r.outcome==='accepted')btnI.hidden=true;return;}
+  let m;
+  if(location.protocol!=='https:') m='App ini dibuka sebagai fail, bukan dari laman web. Untuk install, buka melalui link <b>https://</b> (contoh GitHub Pages), kemudian tekan butang ini sekali lagi.';
+  else if(/iphone|ipad/i.test(navigator.userAgent)) m='Di Safari: tekan butang <b>Kongsi ⬆</b> → <b>Tambah ke Skrin Utama</b>.';
+  else m='Di Chrome: tekan menu <b>⋮</b> (atas kanan) → <b>Install app</b> / <b>Tambah ke skrin utama</b>.<br><br>Kalau pilihan itu tiada, tutup semua tab app ini, buka semula link dan tunggu 10 saat, kemudian cuba lagi. Pastikan guna <b>Google Chrome</b> (bukan browser dalam WhatsApp/Facebook).';
+  $('#installMsg').innerHTML=m;$('#dlgInstall').showModal();
+});
 })();
 </script>
 </body>
