@@ -48,7 +48,11 @@ select,input,textarea{font:inherit;color:var(--text);background:rgba(255,255,255
 select:focus,input:focus{border-color:var(--gold-2);box-shadow:0 0 0 3px rgba(226,184,74,.18)}
 select option{background:#161921;color:var(--text)}
 input[type=month]{width:auto}
-::-webkit-calendar-picker-indicator{filter:invert(.8)}
+::-webkit-calendar-picker-indicator{filter:invert(.8);cursor:pointer}
+.datebox{position:relative}
+.datebox input{color:transparent;cursor:pointer}
+.datebox input::-webkit-datetime-edit{opacity:0}
+.datebox .dtxt{position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text);font-variant-numeric:tabular-nums}
 
 .glass{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 10px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 .card{padding:18px}
@@ -218,7 +222,7 @@ dialog .act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
           </div>
           <div class="row2">
             <div><label class="lbl" for="fWho">Cara bayar</label><select id="fWho"></select></div>
-            <div><label class="lbl" for="fDate">Tarikh</label><input id="fDate" type="date"></div>
+            <div><label class="lbl" for="fDate">Tarikh</label><div class="datebox"><input id="fDate" type="date"><span class="dtxt" id="fDateTxt"></span></div></div>
           </div>
           <div><label class="lbl" for="fNote">Catatan</label><input id="fNote" placeholder="cth: Nasi ayam kafe, print assignment, Grab ke kampus…"></div>
           <button class="btn gold" type="submit">＋ Simpan Perbelanjaan</button>
@@ -332,6 +336,8 @@ function catIcon(n){const c=state.cats.find(c=>c.name===n);return c?c.icon:'✨'
 function person(id){return PEOPLE.find(p=>p.id===id)||PEOPLE[0]}
 function filtered(){return state.tx.filter(t=>sel.person==='all'||t.who===sel.person)}
 function sum(a){return a.reduce((s,t)=>s+t.amt,0)}
+const BLN3=['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogo','Sep','Okt','Nov','Dis'];
+function dateLbl(){const v=$('#fDate').value;$('#fDateTxt').textContent=v?(()=>{const d=parseD(v);return pad(d.getDate())+'/'+BLN3[d.getMonth()]+'/'+d.getFullYear()})():'Pilih tarikh';}
 function weekStart(d){const x=new Date(d);const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);x.setHours(0,0,0,0);return x}
 let toastT; function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
 
@@ -489,6 +495,7 @@ $('#form').addEventListener('submit',e=>{
   const amt=parseAmt($('#fAmt').value);
   if(!(amt>0)){toast('Masukkan jumlah yang sah');$('#fAmt').focus();return;}
   if(!$('#fDate').value) $('#fDate').value=ymd(new Date());
+  dateLbl();
   const t={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),amt:Math.round(amt*100)/100,cat:sel.cat,who:$('#fWho').value,date:$('#fDate').value,note:$('#fNote').value.trim(),via:lastVia,ts:Date.now()};
   state.tx.push(t); save();
   $('#fAmt').value=''; $('#fNote').value=''; lastVia='typed';
@@ -579,7 +586,7 @@ function applyVoice(txt){
   if(r.amt!=null) $('#fAmt').value=r.amt.toFixed(2);
   if(r.who) $('#fWho').value=r.who;
   if(r.cat){sel.cat=r.cat;buildCats();}
-  if(r.date) $('#fDate').value=r.date;
+  if(r.date){ $('#fDate').value=r.date; dateLbl(); }
   if(r.note) $('#fNote').value=r.note;
   lastVia='voice';
   vHint.innerHTML = r.amt!=null
@@ -645,7 +652,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden && V.rec) 
 $('#fAmt').addEventListener('input',()=>{ lastVia='typed'; });
 
 /* ---------- init ---------- */
-$('#month').value=sel.month; $('#fDate').value=ymd(new Date());
+$('#month').value=sel.month; $('#fDate').value=ymd(new Date()); dateLbl();
+['input','change'].forEach(ev=>$('#fDate').addEventListener(ev,dateLbl));
 buildPeople(); buildCats(); render();
 if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
